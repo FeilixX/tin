@@ -1,7 +1,7 @@
 {
   "name": "tin",
   "version": "0.1.0",
-  "description": "Project-local context save and recovery hooks for Codex.",
+  "description": "Codex hooks that keep a project's working context across compaction and new sessions.",
   "author": {
     "name": "tin contributors"
   },
@@ -10,18 +10,18 @@
   "license": "MIT",
   "keywords": [
     "codex",
-    "plugin",
+    "codex-plugin",
     "hooks",
     "context",
     "compaction"
   ],
   "interface": {
     "displayName": "tin",
-    "shortDescription": "Save and restore project context.",
-    "longDescription": "Project-local context hooks; ask your agent to save at any time.",
+    "shortDescription": "Keep project context across compaction.",
+    "longDescription": "Codex hooks for one project's context. At a context threshold tin asks the agent to write the project's own documents; at session start it hands those paths back with how stale each one is. tin stores no content itself -- the documents are yours and the agent writes them.",
     "developerName": "tin contributors",
     "category": "Productivity",
     "capabilities": [],
-    "defaultPrompt": "Show tin help and configure context files for this project."
+    "defaultPrompt": "Configure tin's context documents for this project and show tin --help."
   }
 }

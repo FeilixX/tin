@@ -5,7 +5,7 @@ members = ["xtask"]
 name = "tin"
 version = "0.1.0"
 edition = "2024"
-description = "Project-local context save and recovery hooks for Codex."
+description = "Codex hooks that keep a project's working context across compaction and new sessions."
 repository = "https://github.com/FeilixX/tin"
 license = "MIT"
 # Oldest toolchain this has actually been built with. The true floor may be
