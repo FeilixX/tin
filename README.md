@@ -1,3 +1,9 @@
+<p align="center">
+  <img src="https://raw.githubusercontent.com/FeilixX/tin/main/assets/hero.png"
+       alt="tin: keep the why across sessions. Project-owned context for Codex."
+       width="880">
+</p>
+
 # tin
 
 Codex compaction and new sessions lose the reasoning behind a project. The files
