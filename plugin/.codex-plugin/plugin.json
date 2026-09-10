@@ -1,0 +1,27 @@
+{
+  "name": "tin",
+  "version": "0.1.0",
+  "description": "Project-local context save and recovery hooks for Codex.",
+  "author": {
+    "name": "tin contributors"
+  },
+  "homepage": "https://github.com/FeilixX/tin",
+  "repository": "https://github.com/FeilixX/tin",
+  "license": "MIT",
+  "keywords": [
+    "codex",
+    "plugin",
+    "hooks",
+    "context",
+    "compaction"
+  ],
+  "interface": {
+    "displayName": "tin",
+    "shortDescription": "Save and restore project context.",
+    "longDescription": "Project-local context hooks; ask your agent to save at any time.",
+    "developerName": "tin contributors",
+    "category": "Productivity",
+    "capabilities": [],
+    "defaultPrompt": "Show tin help and configure context files for this project."
+  }
+}

@@ -1,0 +1,55 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: ${{ matrix.label }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            label: macos-arm64
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            label: windows-x64
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Target
+        run: rustup target add ${{ matrix.target }}
+
+      - name: Package
+        run: cargo xtask package --target ${{ matrix.target }}
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: tin-${{ matrix.label }}
+          path: dist/tin-${{ matrix.label }}.zip
+          if-no-files-found: error
+
+  publish:
+    # Publishes only; it never builds, so the runner platform is irrelevant.
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/*.zip --repo "$GITHUB_REPOSITORY" --generate-notes

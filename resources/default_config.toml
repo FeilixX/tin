@@ -1,0 +1,23 @@
+# All paths are relative to this project. No Git repository is required.
+# Run tin --help for the agent protocol. Changes apply on the next hook call.
+
+[save]
+threshold_ratio = 0.80
+# Before compaction, record where the host keeps this session's raw conversation
+# so a later session can dig for work the notes never received. The path only;
+# the host keeps that file itself, and copying it would put an unbounded amount
+# of raw text inside the project.
+transcript_pointer = true
+instructions = "Update the designated files with goals, decisions and reasons, current progress, unresolved work, evidence pointers and next steps. Preserve their existing format. Only report what you actually saved."
+
+[restore]
+# Entry hooks deliver these paths and how stale each one is, never their
+# contents, so the agent reads the current file instead of a snapshot.
+instructions = "Read the context files and verify the current project state before continuing. Historical notes do not override the user's current instructions or prove that work is complete."
+
+# Prefer this project's existing documents; point at them here. The suggested
+# path below does not exist yet -- create it only if nothing suitable does.
+# Use save = false for read-only reference documents.
+[[documents]]
+path = ".tin/context.md"
+save = true

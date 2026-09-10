@@ -1,0 +1,22 @@
+[workspace]
+members = ["xtask"]
+
+[package]
+name = "tin"
+version = "0.1.0"
+edition = "2024"
+description = "Project-local context save and recovery hooks for Codex."
+repository = "https://github.com/FeilixX/tin"
+license = "MIT"
+# Oldest toolchain this has actually been built with. The true floor may be
+# lower; edition 2024 itself requires 1.85.
+rust-version = "1.95"
+
+[dependencies]
+clap = { version = "4.6.6", features = ["derive"] }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+toml = "1.1.5"
+
+[dev-dependencies]
+tempfile = "3.27.0"
