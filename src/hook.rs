@@ -13,11 +13,11 @@ use std::{
 pub enum Event {
     /// Ask the agent to update configured files above the context threshold.
     Stop,
-    /// Preserve one raw transcript copy before compaction.
+    /// Record where the host keeps the raw conversation, before compaction.
     PreCompact,
-    /// Read current context files on startup, resume, clear or compact.
+    /// Hand back the configured paths on startup, resume, clear or compact.
     SessionStart,
-    /// Remind the agent to read context if startup delivery was delayed.
+    /// Repeat that entry when startup delivery waits for the first input.
     UserPromptSubmit,
 }
 
@@ -212,9 +212,14 @@ fn handle(event: Event, input: &Input, root: &Path, config: &Config) -> Result<V
                     Ok(recorded) => {
                         let recorded = recorded.trim();
                         text.push_str(&format!(
-                            "\nRaw conversation: {}\nThe host's own record of the session before its last compaction, not a summary. If it is newer than the notes above, it holds work they are missing.\n",
+                            "\nRaw conversation: {}\n",
                             detail(recorded, Path::new(recorded), "gone from the host")
                         ));
+                        // Explaining it every turn is prose UserPromptSubmit
+                        // cannot afford; the path itself is the useful part.
+                        if matches!(event, Event::SessionStart) {
+                            text.push_str("The host's own record of the session before its last compaction, not a summary. If it is newer than the notes above, it holds work they are missing.\n");
+                        }
                     }
                     Err(e) if e.kind() == ErrorKind::NotFound => (),
                     Err(e) => text.push_str(&format!(

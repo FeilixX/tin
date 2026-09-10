@@ -86,7 +86,7 @@ pub fn init(directory: Option<PathBuf>) -> Result<()> {
     }
     config::Config::load(&root)?;
     println!(
-        "Read .tin/config.toml and choose the documents your agent should save and restore. Run tin --help for the agent protocol."
+        "Read .tin/config.toml and point it at the documents this project already has. Run tin --help for the protocol."
     );
     Ok(())
 }

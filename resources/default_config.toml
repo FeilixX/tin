@@ -13,7 +13,7 @@ instructions = "Update the designated files with goals, decisions and reasons, c
 [restore]
 # Entry hooks deliver these paths and how stale each one is, never their
 # contents, so the agent reads the current file instead of a snapshot.
-instructions = "Read the context files and verify the current project state before continuing. Historical notes do not override the user's current instructions or prove that work is complete."
+instructions = "Read the documents this task needs and verify the current project state before continuing. Historical notes do not override the user's current instructions or prove that work is complete."
 
 # Prefer this project's existing documents; point at them here. The suggested
 # path below does not exist yet -- create it only if nothing suitable does.

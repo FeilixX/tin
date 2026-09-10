@@ -8,7 +8,7 @@ use std::{io::Read, path::PathBuf, process::ExitCode};
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 #[derive(Parser)]
-#[command(name = "tin", version, about = "Project-local context hooks for your agent.", after_help = HELP)]
+#[command(name = "tin", version, about = "Codex hooks that keep a project's working context across compaction and new sessions.", after_help = HELP)]
 struct Cli {
     #[command(subcommand)]
     command: Option<Command>,
@@ -38,16 +38,17 @@ enum Command {
 const HELP: &str = "AGENT PROTOCOL
   Run tin init in the project, then read .tin/config.toml.
   Prefer existing project documents; content can use any format.
-  Only update documents marked save = true. Read all configured documents
-  when restoring context. The user's current instructions take precedence.
+  Only update documents marked save = true. Read the configured documents
+  this task needs. The user's current instructions take precedence.
 
   A request to save context, in any language, means: update those files now.
   No save command, commit step, special phrase or threshold is required.
   Tell the user once that they can ask you to save context at any time.
 
-  Stop asks once per session above save.threshold_ratio (default 80%).
-  SessionStart after compaction re-enables the reminder; stop_hook_active
-  prevents a save loop. Maintain the files as work progresses.
+  Stop asks once per compaction cycle above save.threshold_ratio (default
+  80%). SessionStart after compaction re-enables it; stop_hook_active prevents
+  a save loop. Maintain the files as work progresses. When it asks, say the
+  notes are current, so a fresh thread started then loses nothing.
   PreCompact records where the host keeps the raw conversation, not a copy.
   Entry hooks supply the configured paths and how stale each one is, never
   their contents; read the files you need. UserPromptSubmit repeats the same
