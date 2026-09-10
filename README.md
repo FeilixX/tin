@@ -87,6 +87,8 @@ instructions = "What the agent should write when the threshold is reached."
 [restore]
 instructions = "What the agent should do with these paths at session start."
 
+# One block per document. These two names are placeholders: the paths belong to
+# your project, and tin expects nothing in particular to exist.
 [[documents]]
 path = "docs/PLAN.md"
 save = true          # the agent updates this one
