@@ -12,10 +12,10 @@ resolve on PATH for every Codex session; a plugin installed without it fails on
 every hook.
 
 Take the release archive matching this host from
-https://github.com/FeilixX/tin/releases and put the executable on PATH, or build
-from a source checkout with `cargo xtask package` and install the result from
-`dist/`. macOS and Windows are supported. Choose a PATH directory the user
-already owns; ask before creating a new one or editing PATH.
+https://github.com/FeilixX/tin/releases, extract it, and put the executable on
+PATH. From a source checkout instead, `cargo xtask package` builds the same
+archive under `dist/`. macOS and Windows are supported. Choose a PATH directory
+the user already owns; ask before creating one or editing PATH.
 
 Confirm with `tin --help`. That output is also the agent usage protocol; read it.
 If `tin --help` does not resolve, stop and tell the user rather than installing
@@ -47,16 +47,23 @@ many files as the project needs; no authority manifest or particular content for
 is required. Paths are relative to the project. Mark files to update with
 `save = true` and read-only recovery references with `save = false`.
 
-If no suitable documents exist, use the suggested `.tin/context.md`. Populate it
-with the current goal, progress, next steps, key decisions and reasons, unfinished
-work, blockers and necessary file pointers. Keep it a concise description of the
-current state: revise outdated information instead of continually appending a
-session log. Split it only when the project needs separate documents.
+`tin init` creates no document. If the project has nothing suitable, write one
+yourself at the suggested `.tin/context.md` or wherever the project prefers, and
+point the configuration at it. Give it the current goal, progress, next steps,
+key decisions and their reasons, unfinished work, blockers and necessary file
+pointers. Keep it a description of the current state: revise what went stale
+instead of appending a session log. Split it only when the project needs
+separate documents.
 
 Git is optional. If the project already uses Git, a commit hash and a short account
 of uncommitted changes can help the next agent check the code state. They supplement
 the context notes; they do not replace goals, reasoning or remaining work. Do not
 initialize a repository or create commits solely to enable tin.
+
+Entry hooks deliver these paths and how stale each one is, never the file
+contents, so list documents worth opening rather than everything the project
+owns, and expect to read them yourself. A configured path may not exist yet;
+one that exists but is not a file is refused.
 
 Adapt the save and restore instructions to these documents. Keep the supplied
 threshold unless the user or project needs a different value. The CLI help is the
@@ -64,12 +71,16 @@ save and restore protocol.
 
 ## 4. Report the result
 
-Tell the user exactly which files will be updated before compaction and which
-will be read when restoring context. Use the actual configured paths, for example:
+Tell the user exactly which files you will update at the threshold and which
+ones you are handed at session start. Use the actual configured paths, for
+example:
 
-> Before compaction, I will update A and B. When restoring context, I will read
-> A, B and C. You can change this selection or ask me to save context at any time.
+> When this session's context reaches 80%, I will update A and B, and tell you
+> the notes are current so you can start a fresh thread without losing anything.
+> At the start of a session I am given A, B and C with how stale each one is, and
+> I read the ones the task needs. You can change this selection or ask me to save
+> context at any time.
 
-Explain this in the user's language. Tell them to restart Codex to load
-the plugin and approve hook trust when prompted, and that the hooks need `tin` on
+Explain this in the user's language. Tell them to restart Codex to load the
+plugin and approve hook trust when prompted, and that the hooks need `tin` on
 PATH. Distinguish completed installation from hook behavior actually observed.
