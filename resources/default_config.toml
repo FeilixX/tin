@@ -4,6 +4,7 @@
 [save]
 # Used by the Codex Stop hook: the "Context N% used" Codex shows, as a ratio.
 threshold_ratio = 0.80
+# Used by the Codex PreCompact hook; other hosts run no tin hooks.
 # Before compaction, record where the host keeps this session's raw conversation
 # so a later session can dig for work the notes never received. The path only;
 # the host keeps that file itself, and copying it would put an unbounded amount

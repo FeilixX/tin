@@ -1,6 +1,6 @@
 <p align="center">
   <img src="https://raw.githubusercontent.com/FeilixX/tin/main/assets/hero.png"
-       alt="tin: keep the why across sessions. Project-owned context for Codex."
+       alt="tin: keep the why across sessions."
        width="880">
 </p>
 
@@ -92,8 +92,8 @@ project already has; create one only if it has none.
 
 ```toml
 [save]
-threshold_ratio = 0.80   # Codex hooks only
-transcript_pointer = true
+threshold_ratio = 0.80    # Codex hooks only
+transcript_pointer = true # Codex hooks only
 instructions = "What the agent should write when saving."
 
 [restore]
