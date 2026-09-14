@@ -49,11 +49,8 @@ fn configured_files_are_saved_by_agent_and_restored_through_hooks() {
     let root = project.path();
     init(root);
     let transcript = root.join("conversation.jsonl");
-    let observation = json!({"payload":{"type":"token_count","info":{
-        "last_token_usage":{"total_tokens":95}, "model_context_window":100
-    }}})
-    .to_string();
-    fs::write(&transcript, &observation).unwrap();
+    // 90% as the Codex status line shows it.
+    fs::write(&transcript, observation(233_760, 258_400)).unwrap();
     let input = json!({"transcript_path":transcript});
     let stop = hook(root, "stop", input.clone());
     assert_eq!(stop["decision"], "block");
@@ -162,4 +159,69 @@ fn warning_reaches_agent_without_blocking() {
             .contains("previous hook did not complete")
     );
     assert!(!root.join(".tin/runtime/warning.txt").exists());
+}
+
+fn observation(used: u64, window: u64) -> String {
+    json!({"payload":{"type":"token_count","info":{
+        "last_token_usage":{"total_tokens":used}, "model_context_window":window
+    }}})
+    .to_string()
+}
+
+/// The user sees Codex's "Context N% used", not used/window, so 80% has to
+/// mean the number on the status line.
+#[test]
+fn threshold_matches_the_codex_status_line() {
+    let project = tempfile::tempdir().unwrap();
+    let root = project.path();
+    init(root);
+    let transcript = root.join("conversation.jsonl");
+    let stop = |used, session| {
+        fs::write(&transcript, observation(used, 258_400)).unwrap();
+        hook(
+            root,
+            "stop",
+            json!({"transcript_path":transcript, "session_id":session}),
+        )
+    };
+    // Exactly 80% of the window, which the status line shows as 79% used.
+    assert_eq!(stop(206_720, "shown-79"), json!({}));
+    assert_eq!(stop(208_000, "shown-80")["decision"], "block");
+}
+
+fn status(directory: &Path) -> std::process::Output {
+    Command::new(env!("CARGO_BIN_EXE_tin"))
+        .arg("status")
+        .current_dir(directory)
+        .output()
+        .unwrap()
+}
+
+#[test]
+fn status_prints_the_session_start_entry_for_hostless_agents() {
+    let project = tempfile::tempdir().unwrap();
+    let root = project.path();
+    assert!(!status(root).status.success());
+    init(root);
+    fs::write(root.join(".tin/context.md"), "Goal: port tin.").unwrap();
+    fs::create_dir_all(root.join(".tin/runtime")).unwrap();
+    fs::write(root.join(".tin/runtime/warning.txt"), "Stop failed").unwrap();
+    let nested = root.join("src/deep");
+    fs::create_dir_all(&nested).unwrap();
+
+    let output = status(&nested);
+    assert!(output.status.success());
+    let text = String::from_utf8(output.stdout).unwrap();
+    assert!(text.contains(".tin/context.md  written "));
+    assert!(!text.contains("Goal: port tin."));
+    // Shown once, to whoever reads it first.
+    assert!(text.contains("tin warning: Stop failed"));
+    assert!(!root.join(".tin/runtime/warning.txt").exists());
+
+    let text = String::from_utf8(status(&nested).stdout).unwrap();
+    let entry = hook(root, "session-start", json!({"source":"startup"}));
+    assert_eq!(
+        text, entry["hookSpecificOutput"]["additionalContext"],
+        "status and SessionStart should deliver the same entry"
+    );
 }

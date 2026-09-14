@@ -151,85 +151,106 @@ fn handle(event: Event, input: &Input, root: &Path, config: &Config) -> Result<V
                     Err(e) => return Err(format!("Cannot reset save reminder: {e}").into()),
                 }
             }
-            // SessionStart happens once, UserPromptSubmit on every prompt, so
-            // only the first can afford prose. Both carry the paths.
-            let mut text = if matches!(event, Event::SessionStart) {
-                format!(
-                    "tin context for {}, paths relative to it.\n{}\ntin records paths, not contents: read what this task needs, because a copy here would only be a snapshot. You can ask to save context at any time, in any language; tell the user that once. Help: tin --help\n",
-                    project::shown(root),
-                    config.restore.instructions,
-                )
-            } else {
-                format!(
-                    "tin context for {}, paths relative to it. Read what this task needs if it is not loaded.\n",
-                    project::shown(root)
-                )
-            };
-            let note = project::local_path(root, ".tin/runtime/warning.txt")?;
-            match fs::read_to_string(&note) {
-                Ok(message) => {
-                    text.push_str(&format!("\ntin warning: {message}\nTell the user; the previous hook did not complete.\n"));
-                    if let Err(e) = fs::remove_file(&note) {
-                        text.push_str(&format!(
-                            "tin warning: Cannot remove {}: {e}\n",
-                            project::shown(&note)
-                        ));
-                    }
-                }
-                Err(e) if e.kind() == ErrorKind::NotFound => (),
-                Err(e) => text.push_str(&format!(
-                    "tin warning: Cannot read {}: {e}. Tell the user.\n",
-                    project::shown(&note)
-                )),
-            }
-            let (mut writable, mut reference) = (Vec::new(), Vec::new());
-            for doc in &config.documents {
-                project::local_path(root, &doc.path)?;
-                let line = describe(root, &doc.path);
-                if doc.save {
-                    &mut writable
-                } else {
-                    &mut reference
-                }
-                .push(line);
-            }
-            for (heading, paths) in [
-                ("\nUpdate when saving:\n", writable),
-                ("\nRead-only reference:\n", reference),
-            ] {
-                if !paths.is_empty() {
-                    text.push_str(heading);
-                    for line in paths {
-                        text.push_str(&format!("  {line}\n"));
-                    }
-                }
-            }
-            if config.save.transcript_pointer {
-                match fs::read_to_string(project::local_path(
-                    root,
-                    &format!(".tin/runtime/{POINTER}"),
-                )?) {
-                    Ok(recorded) => {
-                        let recorded = recorded.trim();
-                        text.push_str(&format!(
-                            "\nRaw conversation: {}\n",
-                            detail(recorded, Path::new(recorded), "gone from the host")
-                        ));
-                        // Explaining it every turn is prose UserPromptSubmit
-                        // cannot afford; the path itself is the useful part.
-                        if matches!(event, Event::SessionStart) {
-                            text.push_str("The host's own record of the session before its last compaction, not a summary. If it is newer than the notes above, it holds work they are missing.\n");
-                        }
-                    }
-                    Err(e) if e.kind() == ErrorKind::NotFound => (),
-                    Err(e) => text.push_str(&format!(
-                        "tin warning: cannot read the recorded transcript path: {e}\n"
-                    )),
-                }
-            }
-            Ok(context(event, text))
+            let full = matches!(event, Event::SessionStart);
+            Ok(context(event, entry(root, config, full)?))
         }
     }
+}
+
+/// `tin status`: the same entry SessionStart delivers, for agents whose host
+/// runs no tin hooks. Sharing it keeps the two from drifting apart.
+pub fn status(directory: Option<PathBuf>) -> Result<()> {
+    let cwd = match directory {
+        Some(directory) => directory,
+        None => std::env::current_dir()?,
+    };
+    let root = project::find(&cwd)?
+        .ok_or("No .tin/config.toml in this directory or above. Run tin init first.")?;
+    print!("{}", entry(&root, &Config::load(&root)?, true)?);
+    Ok(())
+}
+
+/// The configured paths and how stale each one is. SessionStart happens once,
+/// UserPromptSubmit on every prompt, so only a `full` entry can afford prose.
+/// Both carry the paths.
+fn entry(root: &Path, config: &Config, full: bool) -> Result<String> {
+    let mut text = if full {
+        format!(
+            "tin context for {}, paths relative to it.\n{}\ntin records paths, not contents: read what this task needs, because a copy here would only be a snapshot. You can ask to save context at any time, in any language; tell the user that once. Help: tin --help\n",
+            project::shown(root),
+            config.restore.instructions,
+        )
+    } else {
+        format!(
+            "tin context for {}, paths relative to it. Read what this task needs if it is not loaded.\n",
+            project::shown(root)
+        )
+    };
+    let note = project::local_path(root, ".tin/runtime/warning.txt")?;
+    match fs::read_to_string(&note) {
+        Ok(message) => {
+            text.push_str(&format!(
+                "\ntin warning: {message}\nTell the user; the previous hook did not complete.\n"
+            ));
+            if let Err(e) = fs::remove_file(&note) {
+                text.push_str(&format!(
+                    "tin warning: Cannot remove {}: {e}\n",
+                    project::shown(&note)
+                ));
+            }
+        }
+        Err(e) if e.kind() == ErrorKind::NotFound => (),
+        Err(e) => text.push_str(&format!(
+            "tin warning: Cannot read {}: {e}. Tell the user.\n",
+            project::shown(&note)
+        )),
+    }
+    let (mut writable, mut reference) = (Vec::new(), Vec::new());
+    for doc in &config.documents {
+        project::local_path(root, &doc.path)?;
+        let line = describe(root, &doc.path);
+        if doc.save {
+            &mut writable
+        } else {
+            &mut reference
+        }
+        .push(line);
+    }
+    for (heading, paths) in [
+        ("\nUpdate when saving:\n", writable),
+        ("\nRead-only reference:\n", reference),
+    ] {
+        if !paths.is_empty() {
+            text.push_str(heading);
+            for line in paths {
+                text.push_str(&format!("  {line}\n"));
+            }
+        }
+    }
+    if config.save.transcript_pointer {
+        match fs::read_to_string(project::local_path(
+            root,
+            &format!(".tin/runtime/{POINTER}"),
+        )?) {
+            Ok(recorded) => {
+                let recorded = recorded.trim();
+                text.push_str(&format!(
+                    "\nRaw conversation: {}\n",
+                    detail(recorded, Path::new(recorded), "gone from the host")
+                ));
+                // Explaining it every turn is prose UserPromptSubmit cannot
+                // afford; the path itself is the useful part.
+                if full {
+                    text.push_str("The host's own record of the session before its last compaction, not a summary. If it is newer than the notes above, it holds work they are missing.\n");
+                }
+            }
+            Err(e) if e.kind() == ErrorKind::NotFound => (),
+            Err(e) => text.push_str(&format!(
+                "tin warning: cannot read the recorded transcript path: {e}\n"
+            )),
+        }
+    }
+    Ok(text)
 }
 
 /// One line per configured path: where it is and how stale it is. The age is
@@ -287,6 +308,24 @@ fn write_runtime(root: &Path, name: &str, bytes: &[u8]) -> Result<()> {
     Ok(())
 }
 
+/// Context the Codex status line leaves out of its percentage: the fixed cost
+/// of every request.
+const BASELINE_TOKENS: f64 = 12000.0;
+
+/// The share of the context window in use, computed as the Codex status line's
+/// "Context N% used" (codex-rs/tui/src/token_usage.rs), so the threshold is the
+/// number the user can see. A plain used/window runs up to 12000/window higher.
+fn shown_usage(used: u64, window: u64) -> f64 {
+    let (used, window) = (used as f64, window as f64);
+    if window <= BASELINE_TOKENS {
+        return 1.0;
+    }
+    let effective = window - BASELINE_TOKENS;
+    let remaining = (effective - (used - BASELINE_TOKENS).max(0.0)).max(0.0);
+    let remaining = (remaining / effective * 100.0).clamp(0.0, 100.0).round();
+    (100.0 - remaining) / 100.0
+}
+
 fn usage_ratio(path: &Path) -> Result<f64> {
     let file =
         fs::File::open(path).map_err(|e| format!("Cannot read {}: {e}", project::shown(path)))?;
@@ -303,7 +342,7 @@ fn usage_ratio(path: &Path) -> Result<f64> {
                 info["last_token_usage"]["total_tokens"].as_u64(),
                 info["model_context_window"].as_u64(),
             ) {
-                (Some(used), Some(window)) if window > 0 => Some(used as f64 / window as f64),
+                (Some(used), Some(window)) if window > 0 => Some(shown_usage(used, window)),
                 _ => None,
             };
         }

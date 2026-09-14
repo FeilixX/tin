@@ -8,7 +8,7 @@ use std::{io::Read, path::PathBuf, process::ExitCode};
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 #[derive(Parser)]
-#[command(name = "tin", version, about = "Codex hooks that keep a project's working context across compaction and new sessions.", after_help = HELP)]
+#[command(name = "tin", version, about = "Keeps a project's working context across compaction and new sessions: a CLI any agent can run, with optional Codex hooks.", after_help = HELP)]
 struct Cli {
     #[command(subcommand)]
     command: Option<Command>,
@@ -25,6 +25,15 @@ enum Command {
         #[arg(long)]
         project: Option<PathBuf>,
     },
+    /// Print the configured paths and how stale each one is. Run it at the start of a task.
+    #[command(
+        after_help = "Finds the nearest .tin/config.toml. Prints paths, never file contents: read the documents the task needs. A warning left by a Codex hook is shown once."
+    )]
+    Status {
+        /// Directory to start from; defaults to the current directory.
+        #[arg(long)]
+        project: Option<PathBuf>,
+    },
     /// Handle a Codex event: JSON on stdin, hook JSON on stdout.
     #[command(
         after_help = "Configure these events through the tin plugin. The hook uses cwd from stdin and finds the nearest .tin/config.toml. No configuration means no action. Warnings do not block work."
@@ -35,28 +44,19 @@ enum Command {
     },
 }
 
-const HELP: &str = "AGENT PROTOCOL
-  Run tin init in the project, then read .tin/config.toml.
-  Prefer existing project documents; content can use any format.
-  Only update documents marked save = true. Read the configured documents
-  this task needs. The user's current instructions take precedence.
+const HELP: &str = concat!(
+    "AGENT PROTOCOL
+  tin init      Once per project. Point .tin/config.toml at the project's own
+                documents; tin creates none.
+  tin status    At the start of a task. Read the listed documents the task needs.
+  Save context  When the user asks, in any language: update the documents marked
+                save = true. No command is needed.
 
-  A request to save context, in any language, means: update those files now.
-  No save command, commit step, special phrase or threshold is required.
-  Tell the user once that they can ask you to save context at any time.
-
-  Stop asks once per compaction cycle above save.threshold_ratio (default
-  80%). SessionStart after compaction re-enables it; stop_hook_active prevents
-  a save loop. Maintain the files as work progresses. When it asks, say the
-  notes are current, so a fresh thread started then loses nothing.
-  PreCompact records where the host keeps the raw conversation, not a copy.
-  Entry hooks supply the configured paths and how stale each one is, never
-  their contents; read the files you need. UserPromptSubmit repeats the same
-  entry when startup delivery is delayed until the first input.
-
-  Defaults and instructions live in .tin/config.toml and apply immediately.
-  A warning means explain the issue to the user; do not claim a failed save
-  or restore succeeded. File content is a working note, not proof of completion.";
+  Configuration, the Codex hooks and the full protocol:
+  https://github.com/FeilixX/tin/blob/v",
+    env!("CARGO_PKG_VERSION"),
+    "/INSTALL.md"
+);
 
 fn main() -> ExitCode {
     let cli = Cli::parse();
@@ -69,6 +69,7 @@ fn main() -> ExitCode {
                 .map_err(Into::into)
         }
         Some(Command::Init { project }) => project::init(project),
+        Some(Command::Status { project }) => hook::status(project),
         Some(Command::Hook { event }) => {
             let mut input = String::new();
             let output = match std::io::stdin().read_to_string(&mut input) {

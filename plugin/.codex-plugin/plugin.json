@@ -1,6 +1,6 @@
 {
   "name": "tin",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Codex hooks that keep a project's working context across compaction and new sessions.",
   "author": {
     "name": "tin contributors"
